@@ -15,6 +15,28 @@
 
 На следующем шаге было решено провести графовый анализ комбинаций слов, в итоге получились следующие графы по разным новостным корпусам:
 
+![alt text](/images/graphone.PNG)
+
+![alt text](/images/americannews.png)
+
+## Тематическое моделирование
+
+В тематическом моделировании использовалась в основном классическая модель LDA, а также ее дополнение в R  - Structural Topic Modelling. 
+
+Последовательная реализация LDA в следующих ноутбуках:
+
+* [Russian_news_LDAexploration.ipynb](https://github.com/Nastiiasaenko/Agenda-setting_strategies/blob/master/Russian_news_LDAexploration.ipynb)
+* [Russia_finale_finale.ipynb](https://github.com/Nastiiasaenko/Agenda-setting_strategies/blob/master/Russia_finale_finale.ipynb)
+* [American_news.final.ipynb](https://github.com/Nastiiasaenko/Agenda-setting_strategies/blob/master/American_news.final.ipynb)
+
+### Структурное тематическое моделирование
+
+Модель STM была реализована на корпусе новостей New York Times, где в качестве ковариатов была взята категориальная переменная ( категории - внешняя и внутренняя повестка) и время. 
+
+Реализация STM подробно представлена [здесь](https://htmlpreview.github.io/?https://github.com/Nastiiasaenko/Agenda-setting_strategies/blob/master/stm_model.html).
+
+
+
 
 
 
