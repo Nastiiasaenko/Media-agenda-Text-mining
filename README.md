@@ -35,7 +35,18 @@
 
 Реализация STM подробно представлена [здесь](https://htmlpreview.github.io/?https://github.com/Nastiiasaenko/Agenda-setting_strategies/blob/master/stm_model.html).
 
+# Результаты 
+Для каждого кластера тем были получены wordclouds по каждой теме, по которым можно было бы судить о смысле той или иной темы, например:
+![alt text](/images/sexualass.png)
 
+Темы далее группировались в более широкие кластеры:
+![alt text](/images/Anewspie.png)
+
+В дальнейшем брались специфические темы и сравнивалось их освещения в разных источниках:
+![alt-text-1](/images/hill.png) ![alt-text-2](/images/protests.png)
+
+
+Полный процесс исследования и подробные результаты представлены в [презентации](https://drive.google.com/file/d/19g0yzj_QnY03k6_-aXdXh88I50c5HTn0/view?usp=sharing), а также в тексте исследования( обращаться к автору). 
 
 
 
