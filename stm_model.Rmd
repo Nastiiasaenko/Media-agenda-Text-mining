@@ -1,0 +1,161 @@
+---
+title: "stm_model_estimation"
+output: html_document
+---
+
+```{r setup, include=FALSE, message = FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## В structural topic modeling учитываются доп. переменные ( covariates).
+
+**В своей модели  я взяла два ковариата Time и Type ( новость из внутренней повестки или о внешней повестке ( разделялось по метаданным из NY api - там даются тэги ))
+
+# Загрузим результаты модели 
+```{r}
+load("~/Курсач/R_notebooks/stmfit.RData")
+load("~/Курсач/R_notebooks/out.RData")
+load("~/Курсач/R_notebooks/estimeffects.RData")
+```
+
+# Посмотрим на распределение топиков
+```{r, message = FALSE}
+library(scales)
+library(tidytext)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+td_gamma <- tidy(stmFit, matrix = 'theta')
+td_beta <- tidy(stmFit)
+top_terms <- td_beta %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(7, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>% 
+  unnest()
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+```
+
+
+```{r fig.height=10, fig.width=16, message=FALSE, warning=FALSE}
+
+gamma_terms %>%
+  top_n(85, gamma) %>%
+  ggplot(aes(topic, gamma, label = terms, fill = topic)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3,
+            family = "IBMPlexSans") +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  theme_tufte(base_family = "IBMPlexSans", ticks = FALSE) +
+  theme(plot.title = element_text(size = 16,
+                                  family="IBMPlexSans-Bold"),
+        plot.subtitle = element_text(size = 13)) +
+  labs(x = NULL, y = expression(gamma),
+       title = " topics by prevalence in the  corpus",
+       subtitle = "With the top words that contribute to each topic")
+
+```
+
+**На что смотрим тут:**
+
+Смотрим есть ли темы " имеющие смысл" в нижних зонах распределения ( то есть представленных в меньших количествах)
+
+**Бросаются в глаза из сине-зеленой зоны (более менее средней)**
+```{r message=FALSE, warning=FALSE}
+library(stm)
+labelTopics(stmFit,topics=c(7,30,43,22,9,59,75,60,56,67,64,83))
+```
+ 
+**Посмотри на темы из самой нижней зоны**
+```{r warning=FALSE}
+g <- subset(td_beta,td_beta$topic == c(14,58,10,50,27,21,6,4,72))
+```
+
+```{r, fig.width=9, fig.height=6}
+g %>%
+    group_by(topic) %>%
+    top_n(10, beta) %>%
+    ungroup() %>%
+    mutate(topic = paste0("Topic ", topic),
+           term = reorder_within(term, beta, topic)) %>%
+    ggplot(aes(term, beta, fill = as.factor(topic))) +
+    geom_col(alpha = 0.8, show.legend = FALSE) +
+    facet_wrap(~ topic, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    labs(x = NULL, y = expression(beta),
+         title = "Highest word probabilities for each topic",
+         subtitle = "Different words are associated with least presented topics")
+```
+```{r}
+library(stm)
+labelTopics(stmFit,topics=c(14,58,10,50,27,21,6,4,72))
+```
+
+**Ну и общая сводка по темам для удобства**
+```{r}
+library(knitr)
+gamma_terms %>%
+  select(topic, gamma, terms) %>%
+  kable(digits = 3, 
+        col.names = c("Topic", "Expected topic proportion", "Top 7 terms"))
+
+```
+
+
+## Some estimation effects 
+
+Посмотри для каких тем оказалось значимым разделение на foreign повестику и domestic ( по бинарному модератору)
+```{r, fig.width=10, fig.height= 10}
+Result <- plot(prep, "Type", method = "difference", 
+                              cov.value1 = "foreign", cov.value2 = "domestic", 
+                              verbose.labels = F, 
+                              ylab = "Expected Difference in Topic Probability by Party \n (with 95% Confidence Intervals)", 
+                              xlab = "More Likely domestic                         Not Significant                          More Likely foreign",
+                              main = "Effect of Type on Topic Prevelance ",
+                              xlim = c(-0.08,0.08))
+```
+
+
+# Много в области not significant, хотя и можно увидеть условное разделение 
+
+По выдачам можно посмотреть всякие p-value и прочее. 
+```{r}
+effects <- summary(prep)
+tidy_eff <- tidy(prep)
+set <- subset(tidy_eff, tidy_eff$term == 'Typeforeign')
+unique(subset(set$topic, set$p.value < 0.0000001))
+```
+
+# Time effects
+* График конечно не очень, но видим, что большинство тем имеют более менее одинаковую динамику на всем периоды ( что-то вроде шума, хотя и нет ). 
+```{r,fig.width= 25, fig.height= 25}
+time_dependency <- plot(prep, "Time", method = 'continuous',  moderator = "Type", moderator.value = "domestic",ci.level = 0 )
+
+
+```
+
+# Что можно сделать тут? 
+
+Как раз таки тут можно попробовать концептуализировать понятие зашумления ( помимо того, что просто еще смотрим на доли). Видим присутсвие тем, чьи доли не меняются ни в зависимости от модератора ни в зависимости от времени как факторы - возможно это можно трактовать как шум + смотрим динамики, что постепенно падает или очень низко находится по пропорции независимо. В общем сама идея засунуть время не как просто динамику, а именно значимый фактор ( estimate effect ) - возможно имеет смысл. 
+
+# В принципе, что получилось наверное неплохо:
+
+1) топики достаточно специфичны  и имеют смысл (иногда даже какой-то специфический смысл)
+2) чуть-чуть смысла от гипотезы деления на внутреннюю/внешнюю повестку есть ( по крайней мере можно показать какие-то эффекты)
+
+
